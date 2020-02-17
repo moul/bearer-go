@@ -1,6 +1,7 @@
 package bearer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -28,11 +29,22 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 
+	buf, _ := ioutil.ReadAll(req.Body)
+	reqReader1 := ioutil.NopCloser(bytes.NewBuffer(buf))
+	reqReader2 := ioutil.NopCloser(bytes.NewBuffer(buf))
+	req.Body = reqReader2
+
 	start := time.Now()
 	resp, err := a.transport().RoundTrip(req)
 	end := time.Now()
 
 	if a.SecretKey != "" {
+		buf, _ := ioutil.ReadAll(resp.Body)
+		respReader1 := ioutil.NopCloser(bytes.NewBuffer(buf))
+		respReader2 := ioutil.NopCloser(bytes.NewBuffer(buf))
+		resp.Body = respReader2
+		reqBody, _ := ioutil.ReadAll(reqReader1)
+		respBody, _ := ioutil.ReadAll(respReader1)
 		record := ReportLog{
 			Protocol:        req.URL.Scheme,
 			Path:            req.URL.Path,
@@ -44,9 +56,9 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 			StatusCode:      resp.StatusCode,
 			URL:             req.URL.String(),
 			RequestHeaders:  goHeadersToBearerHeaders(req.Header),
-			RequestBody:     "", // FIXME: log body
+			RequestBody:     string(reqBody),
 			ResponseHeaders: goHeadersToBearerHeaders(resp.Header),
-			ResponseBody:    "", // FIXME: log body
+			ResponseBody:    string(respBody),
 		}
 		if err := a.logRecords([]ReportLog{record}); err != nil {
 			a.logger().Warn("log records", zap.Error(err))
