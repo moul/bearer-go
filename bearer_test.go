@@ -1,6 +1,7 @@
 package bearer
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,18 +11,42 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func Example() {
+	// init client
 	client := &http.Client{
 		Transport: &Agent{SecretKey: os.Getenv("BEARER_TOKEN")},
 	}
+
+	// perform request
 	resp, err := client.Get("...")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("resp", resp)
 }
+
+func Example_Options() {
+	logger, _ := zap.NewDevelopment()
+	client := &http.Client{
+		Transport: &Agent{
+			SecretKey: os.Getenv("BEARER_TOKEN"),
+			Logger:    logger,
+			Transport: http.DefaultTransport,
+		},
+	}
+
+	// perform request
+	resp, err := client.Get("...")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("resp", resp)
+}
+
+// FIXME: func Example_RequestFramework
 
 func TestAgent_Config(t *testing.T) {
 	sk := os.Getenv("BEARER_TOKEN")
@@ -87,6 +112,19 @@ func TestRoundTrip(t *testing.T) {
 		resp, err := client.Get(ts.URL)
 		require.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, 200)
+	})
+
+	t.Run("blocked-domain", func(t *testing.T) {
+		client := &http.Client{
+			Transport: &Agent{
+				configCache: &Config{
+					BlockedDomains: []string{"localhost", "127.0.0.1"},
+				},
+			},
+		}
+		resp, err := client.Get(ts.URL)
+		assert.True(t, errors.Is(err, ErrBlockedDomain))
+		assert.Nil(t, resp)
 	})
 
 	sk := os.Getenv("BEARER_TOKEN")

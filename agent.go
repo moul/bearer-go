@@ -13,6 +13,12 @@ import (
 )
 
 func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
+	for _, domain := range a.config().BlockedDomains {
+		if domain == req.URL.Hostname() {
+			return nil, ErrBlockedDomain
+		}
+	}
+
 	start := time.Now()
 	resp, err := a.transport().RoundTrip(req)
 	end := time.Now()
@@ -37,6 +43,7 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 			a.logger().Warn("log records", zap.Error(err))
 		}
 	}
+
 	return resp, err
 }
 
@@ -89,6 +96,19 @@ func (a Agent) transport() http.RoundTripper {
 		return a.Transport
 	}
 	return http.DefaultTransport
+}
+
+func (a *Agent) config() *Config {
+	if a.configCache == nil {
+		var err error
+		a.configCache, err = a.Config()
+		if err != nil {
+			a.logger().Warn("fetch bearer config", zap.Error(err))
+			return nil
+		}
+	}
+
+	return a.configCache
 }
 
 func (a Agent) logRecords(records []ReportLog) error {
