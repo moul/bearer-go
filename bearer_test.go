@@ -15,7 +15,6 @@ import (
 )
 
 func Example() {
-	// initialize bearer
 	Init(os.Getenv("BEARER_SECRETKEY"))
 
 	// perform request
@@ -30,7 +29,7 @@ func Example_Custom() {
 	logger, _ := zap.NewDevelopment()
 	client := &http.Client{
 		Transport: &Agent{
-			SecretKey: os.Getenv("BEARER_TOKEN"),
+			SecretKey: os.Getenv("BEARER_SECRETKEY"),
 			Logger:    logger,
 			Transport: http.DefaultTransport,
 		},
@@ -44,10 +43,8 @@ func Example_Custom() {
 	fmt.Println("resp", resp)
 }
 
-// FIXME: func Example_RequestFramework
-
 func TestAgent_Config(t *testing.T) {
-	sk := os.Getenv("BEARER_TOKEN")
+	sk := os.Getenv("BEARER_SECRETKEY")
 	if sk == "" {
 		t.Skip()
 	}
@@ -82,7 +79,7 @@ func TestAgent_logRecords(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	sk := os.Getenv("BEARER_TOKEN")
+	sk := os.Getenv("BEARER_SECRETKEY")
 	if sk == "" {
 		t.Skip()
 	}

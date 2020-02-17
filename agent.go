@@ -2,19 +2,34 @@ package bearer
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-// Init automatically replaces the default http.DefaultTransport
+type Agent struct {
+	Transport          http.RoundTripper
+	SecretKey          string
+	Logger             *zap.Logger
+	Context            context.Context
+	RefreshConfigEvery time.Duration
+
+	// local vars
+	configCache *Config
+	configMutex sync.Mutex
+}
+
+// Init configures the default http.DefaultTransport with sane default values
 func Init(secretKey string) *Agent {
 	agent := &Agent{SecretKey: secretKey}
 	http.DefaultTransport = agent
@@ -29,22 +44,18 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 
-	buf, _ := ioutil.ReadAll(req.Body)
-	reqReader1 := ioutil.NopCloser(bytes.NewBuffer(buf))
-	reqReader2 := ioutil.NopCloser(bytes.NewBuffer(buf))
-	req.Body = reqReader2
+	var reqReader io.ReadCloser
+	if req.Body != nil {
+		buf, _ := ioutil.ReadAll(req.Body)
+		reqReader = ioutil.NopCloser(bytes.NewBuffer(buf))
+		req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+	}
 
 	start := time.Now()
 	resp, err := a.transport().RoundTrip(req)
 	end := time.Now()
 
 	if a.SecretKey != "" {
-		buf, _ := ioutil.ReadAll(resp.Body)
-		respReader1 := ioutil.NopCloser(bytes.NewBuffer(buf))
-		respReader2 := ioutil.NopCloser(bytes.NewBuffer(buf))
-		resp.Body = respReader2
-		reqBody, _ := ioutil.ReadAll(reqReader1)
-		respBody, _ := ioutil.ReadAll(respReader1)
 		record := ReportLog{
 			Protocol:        req.URL.Scheme,
 			Path:            req.URL.Path,
@@ -56,9 +67,18 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 			StatusCode:      resp.StatusCode,
 			URL:             req.URL.String(),
 			RequestHeaders:  goHeadersToBearerHeaders(req.Header),
-			RequestBody:     string(reqBody),
 			ResponseHeaders: goHeadersToBearerHeaders(resp.Header),
-			ResponseBody:    string(respBody),
+		}
+		if resp.Body != nil {
+			buf, _ := ioutil.ReadAll(resp.Body)
+			respReader := ioutil.NopCloser(bytes.NewBuffer(buf))
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+			respBody, _ := ioutil.ReadAll(respReader)
+			record.ResponseBody = string(respBody)
+		}
+		if reqReader != nil {
+			reqBody, _ := ioutil.ReadAll(reqReader)
+			record.RequestBody = string(reqBody)
 		}
 		if err := a.logRecords([]ReportLog{record}); err != nil {
 			a.logger().Warn("log records", zap.Error(err))
@@ -73,16 +93,6 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 			}
 	*/
 	return resp, err
-}
-
-func goHeadersToBearerHeaders(input http.Header) map[string]string {
-	ret := map[string]string{}
-	for key, values := range input {
-		// bearer headers only support one value per key
-		// so we take the first one and ignore the other ones
-		ret[key] = values[0]
-	}
-	return ret
 }
 
 func (a Agent) Config() (*Config, error) {
@@ -112,6 +122,23 @@ func (a Agent) Config() (*Config, error) {
 	return &config, nil
 }
 
+func goHeadersToBearerHeaders(input http.Header) map[string]string {
+	ret := map[string]string{}
+	for key, values := range input {
+		// bearer headers only support one value per key
+		// so we take the first one and ignore the other ones
+		ret[key] = values[0]
+	}
+	return ret
+}
+
+func (a Agent) context() context.Context {
+	if a.Context != nil {
+		return a.Context
+	}
+	return context.Background()
+}
+
 func (a Agent) logger() *zap.Logger {
 	if a.Logger != nil {
 		return a.Logger
@@ -127,8 +154,8 @@ func (a Agent) transport() http.RoundTripper {
 }
 
 func (a *Agent) config() *Config {
-	// here we can check for the "last config update" to force a new refresh regularly
-
+	a.configMutex.Lock()
+	defer a.configMutex.Unlock()
 	if a.configCache == nil {
 		var err error
 		a.configCache, err = a.Config()

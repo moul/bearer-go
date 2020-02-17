@@ -1,20 +1,5 @@
 package bearer
 
-import (
-	"net/http"
-
-	"go.uber.org/zap"
-)
-
-type Agent struct {
-	Transport http.RoundTripper
-	SecretKey string
-	Logger    *zap.Logger
-
-	// local vars
-	configCache *Config
-}
-
 type Config struct {
 	BlockedDomains []string `json:"blockedDomains"`
 	// FIXME: add missing fieldss
