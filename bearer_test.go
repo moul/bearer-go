@@ -15,7 +15,7 @@ import (
 )
 
 func Example() {
-	Init(os.Getenv("BEARER_SECRETKEY"))
+	ReplaceGlobals(Init(os.Getenv("BEARER_SECRETKEY")))
 
 	// perform request
 	resp, err := http.Get("...")
@@ -27,13 +27,13 @@ func Example() {
 
 func Example_Custom() {
 	logger, _ := zap.NewDevelopment()
-	client := &http.Client{
-		Transport: &Agent{
-			SecretKey: os.Getenv("BEARER_SECRETKEY"),
-			Logger:    logger,
-			Transport: http.DefaultTransport,
-		},
+	agent := &Agent{
+		SecretKey: os.Getenv("BEARER_SECRETKEY"),
+		Logger:    logger,
+		Transport: http.DefaultTransport,
 	}
+	defer agent.Flush()
+	client := &http.Client{Transport: agent}
 
 	// perform request
 	resp, err := client.Get("...")

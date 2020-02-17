@@ -32,8 +32,15 @@ type Agent struct {
 // Init configures the default http.DefaultTransport with sane default values
 func Init(secretKey string) *Agent {
 	agent := &Agent{SecretKey: secretKey}
-	http.DefaultTransport = agent
 	return agent
+}
+
+// ReplaceGlobals replaces the global http.DefaultTransport, and returns
+// a function to restore the original value.
+func ReplaceGlobals(n http.RoundTripper) func() {
+	prev := http.DefaultTransport
+	http.DefaultTransport = n
+	return func() { ReplaceGlobals(prev) }
 }
 
 // RoundTrip implements the http.RoundTripper interface
@@ -120,6 +127,10 @@ func (a Agent) Config() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (a Agent) Flush() error {
+	return nil
 }
 
 func goHeadersToBearerHeaders(input http.Header) map[string]string {
