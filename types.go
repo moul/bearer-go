@@ -7,9 +7,11 @@ import (
 )
 
 type Agent struct {
-	Transport   http.RoundTripper
-	SecretKey   string
-	Logger      *zap.Logger
+	Transport http.RoundTripper
+	SecretKey string
+	Logger    *zap.Logger
+
+	// local vars
 	configCache *Config
 }
 

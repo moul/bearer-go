@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// RoundTrip implements the http.RoundTripper interface
 func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 	for _, domain := range a.config().BlockedDomains {
 		if domain == req.URL.Hostname() {
@@ -44,6 +45,13 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 
+	// here we can handle retry/circuit-breaking policies, i.e.:
+	/*
+		        if resp.StatusCode == 429 {
+				time.Sleep(time.Second)
+				return a.RoundTrip(req)
+			}
+	*/
 	return resp, err
 }
 
@@ -99,6 +107,8 @@ func (a Agent) transport() http.RoundTripper {
 }
 
 func (a *Agent) config() *Config {
+	// here we can check for the "last config update" to force a new refresh regularly
+
 	if a.configCache == nil {
 		var err error
 		a.configCache, err = a.Config()
