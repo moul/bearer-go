@@ -15,20 +15,18 @@ import (
 )
 
 func Example() {
-	// init client
-	client := &http.Client{
-		Transport: &Agent{SecretKey: os.Getenv("BEARER_TOKEN")},
-	}
+	// initialize bearer
+	Init(os.Getenv("BEARER_SECRETKEY"))
 
 	// perform request
-	resp, err := client.Get("...")
+	resp, err := http.Get("...")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("resp", resp)
 }
 
-func Example_Options() {
+func Example_Custom() {
 	logger, _ := zap.NewDevelopment()
 	client := &http.Client{
 		Transport: &Agent{

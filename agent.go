@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"runtime"
 	"strings"
@@ -11,6 +12,13 @@ import (
 
 	"go.uber.org/zap"
 )
+
+// Init automatically replaces the default http.DefaultTransport
+func Init(secretKey string) *Agent {
+	agent := &Agent{SecretKey: secretKey}
+	http.DefaultTransport = agent
+	return agent
+}
 
 // RoundTrip implements the http.RoundTripper interface
 func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -103,7 +111,7 @@ func (a Agent) transport() http.RoundTripper {
 	if a.Transport != nil {
 		return a.Transport
 	}
-	return http.DefaultTransport
+	return defaultHTTPTransport
 }
 
 func (a *Agent) config() *Config {
@@ -183,4 +191,20 @@ func (a Agent) logRecords(records []ReportLog) error {
 
 		return fmt.Errorf("unsupported status code: %d", ret.StatusCode)
 	}
+}
+
+// defaultHTTPTransport is the same as the stdlib http.DefaultTransport
+// we use a dedicated one here to avoid having issues when overriding it
+var defaultHTTPTransport = &http.Transport{
+	Proxy: http.ProxyFromEnvironment,
+	DialContext: (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		DualStack: true,
+	}).DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
 }
