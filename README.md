@@ -38,4 +38,7 @@ See more documentation and examples on [GoDoc](https://godoc.org/github.com/Bear
 ```console
 # test
 $ go test -v ./... -race
+
+# lint
+$ golint ./...
 ```

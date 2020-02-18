@@ -1,6 +1,7 @@
 package bearer
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -26,12 +27,15 @@ func Example() {
 	fmt.Println("resp", resp)
 }
 
-func Example_custom() {
+func Example_advanced() {
 	logger, _ := zap.NewDevelopment()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	agent := &Agent{
 		SecretKey: os.Getenv("BEARER_SECRETKEY"),
 		Logger:    logger,
 		Transport: http.DefaultTransport,
+		Context:   ctx,
 	}
 	defer agent.Flush()
 	client := &http.Client{Transport: agent}
@@ -53,6 +57,39 @@ func TestAgent_Config(t *testing.T) {
 	config, err := agent.Config()
 	require.NoError(t, err)
 	assert.NotNil(t, config)
+}
+
+func TestAgent_config(t *testing.T) {
+	sk := os.Getenv("BEARER_SECRETKEY")
+	if sk == "" {
+		t.Skip()
+	}
+	duration := 500 * time.Millisecond
+	agent := Agent{SecretKey: sk, RefreshConfigEvery: duration}
+
+	config := agent.config()
+	assert.NotNil(t, config)
+	agent.configMutex.Lock()
+	assert.Equal(t, 1, agent.configUpdates)
+	agent.configMutex.Unlock()
+
+	config = agent.config()
+	assert.NotNil(t, config)
+	agent.configMutex.Lock()
+	assert.Equal(t, 1, agent.configUpdates)
+	agent.configMutex.Unlock()
+
+	time.Sleep(duration)
+	time.Sleep(200 * time.Millisecond) // give 200 additional ms for the request to be processed
+	agent.configMutex.Lock()
+	assert.Equal(t, 2, agent.configUpdates)
+	agent.configMutex.Unlock()
+
+	config = agent.config()
+	assert.NotNil(t, config)
+	agent.configMutex.Lock()
+	assert.Equal(t, 2, agent.configUpdates)
+	agent.configMutex.Unlock()
 }
 
 func TestAgent_logRecords(t *testing.T) {
