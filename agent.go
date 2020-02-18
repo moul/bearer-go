@@ -17,6 +17,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// Agent is the main object of this library.
+// You need to initialize an agent first, and then you need
+// to configure your HTTP clients to use it as a RoundTripper.
 type Agent struct {
 	// Agent implements the http.RoundTripper interface
 	http.RoundTripper
@@ -41,8 +44,9 @@ type Agent struct {
 	RefreshConfigEvery time.Duration
 
 	// local vars
-	configCache *Config
-	configMutex sync.Mutex
+	configCache   *Config
+	configMutex   sync.RWMutex
+	configUpdates int
 }
 
 // Init configures the default http.DefaultTransport with sane default values
@@ -184,11 +188,32 @@ func (a *Agent) config() *Config {
 	defer a.configMutex.Unlock()
 	if a.configCache == nil {
 		var err error
+		a.configUpdates++
 		a.configCache, err = a.Config()
 		if err != nil {
 			a.logger().Warn("fetch bearer config", zap.Error(err))
 			return nil
 		}
+
+		// start a goroutine to refresh config regularly
+		duration := a.RefreshConfigEvery
+		if duration <= 0 {
+			duration = 5 * time.Second
+		}
+		go func() {
+			for {
+				time.Sleep(duration)
+				newConfig, err := a.Config()
+				if err != nil {
+					a.logger().Warn("fetch bearer config", zap.Error(err))
+				} else {
+					a.configMutex.Lock()
+					a.configUpdates++
+					a.configCache = newConfig
+					a.configMutex.Unlock()
+				}
+			}
+		}()
 	}
 
 	return a.configCache
@@ -220,11 +245,11 @@ func (a Agent) logRecords(records []ReportLog) error {
 	input.Agent.Version = version
 	input.Agent.LogLevel = "ALL"
 
-	inputJson, err := json.Marshal(input)
+	inputJSON, err := json.Marshal(input)
 	if err != nil {
 		return err
 	}
-	reqBody := ioutil.NopCloser(strings.NewReader(string(inputJson)))
+	reqBody := ioutil.NopCloser(strings.NewReader(string(inputJSON)))
 	req, err := http.NewRequest("POST", "https://agent.bearer.sh/logs", reqBody)
 	if err != nil {
 		return fmt.Errorf("create logs request: %w", err)
