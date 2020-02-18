@@ -26,7 +26,7 @@ func Example() {
 	fmt.Println("resp", resp)
 }
 
-func Example_Custom() {
+func Example_custom() {
 	logger, _ := zap.NewDevelopment()
 	agent := &Agent{
 		SecretKey: os.Getenv("BEARER_SECRETKEY"),

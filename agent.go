@@ -18,10 +18,26 @@ import (
 )
 
 type Agent struct {
-	Transport          http.RoundTripper
-	SecretKey          string
-	Logger             *zap.Logger
-	Context            context.Context
+	// Agent implements the http.RoundTripper interface
+	http.RoundTripper
+
+	// SecretKey is your Bearer Secret Key; available on https://app.bearer.sh/keys
+	// Required
+	SecretKey string
+
+	// If set, the RoundTripper interface actually used to make requests
+	// If nil, an equivalent of http.DefaultTransport is used
+	Transport http.RoundTripper
+
+	// If set, will be used for internal logging.
+	Logger *zap.Logger
+
+	// If set, this context will be used by the agent for managing its internal goroutines
+	// and performing operational requests.
+	Context context.Context
+
+	// Duration between two config refreshes.
+	// If empty, will use 5s as default.
 	RefreshConfigEvery time.Duration
 
 	// local vars
@@ -108,6 +124,7 @@ func (a *Agent) isAvailable() bool {
 	return a.SecretKey != ""
 }
 
+// Config fetches and returns a fresh Bearer configuration for your current token
 func (a Agent) Config() (*Config, error) {
 	req, err := http.NewRequest("GET", "https://config.bearer.sh/config", nil)
 	if err != nil {
@@ -135,18 +152,10 @@ func (a Agent) Config() (*Config, error) {
 	return &config, nil
 }
 
+// Flush flushes any buffered log entries. Applications should take care to call Flush before exiting.
 func (a Agent) Flush() error {
+	// FIXME: this function is just a placeholder before we switch to a new async mechanism
 	return nil
-}
-
-func goHeadersToBearerHeaders(input http.Header) map[string]string {
-	ret := map[string]string{}
-	for key, values := range input {
-		// bearer headers only support one value per key
-		// so we take the first one and ignore the other ones
-		ret[key] = values[0]
-	}
-	return ret
 }
 
 func (a Agent) context() context.Context {
@@ -208,7 +217,7 @@ func (a Agent) logRecords(records []ReportLog) error {
 	input.Runtime.Type = "go"
 	input.Runtime.Version = runtime.Version()
 	input.Agent.Type = "bearer-go"
-	input.Agent.Version = Version
+	input.Agent.Version = version
 	input.Agent.LogLevel = "ALL"
 
 	inputJson, err := json.Marshal(input)
