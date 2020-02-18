@@ -52,7 +52,7 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	var reqReader io.ReadCloser
-	if req.Body != nil {
+	if req.Body != nil && a.isAvailable() {
 		buf, _ := ioutil.ReadAll(req.Body)
 		reqReader = ioutil.NopCloser(bytes.NewBuffer(buf))
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
@@ -62,34 +62,36 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := a.transport().RoundTrip(req)
 	end := time.Now()
 
-	if a.SecretKey != "" {
-		record := ReportLog{
-			Protocol:        req.URL.Scheme,
-			Path:            req.URL.Path,
-			Hostname:        req.URL.Hostname(),
-			Method:          req.Method,
-			StartedAt:       int(start.UnixNano() / 1000000),
-			EndedAt:         int(end.UnixNano() / 1000000),
-			Type:            "REQUEST_END",
-			StatusCode:      resp.StatusCode,
-			URL:             req.URL.String(),
-			RequestHeaders:  goHeadersToBearerHeaders(req.Header),
-			ResponseHeaders: goHeadersToBearerHeaders(resp.Header),
-		}
-		if resp.Body != nil {
-			buf, _ := ioutil.ReadAll(resp.Body)
-			respReader := ioutil.NopCloser(bytes.NewBuffer(buf))
-			resp.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
-			respBody, _ := ioutil.ReadAll(respReader)
-			record.ResponseBody = string(respBody)
-		}
-		if reqReader != nil {
-			reqBody, _ := ioutil.ReadAll(reqReader)
-			record.RequestBody = string(reqBody)
-		}
-		if err := a.logRecords([]ReportLog{record}); err != nil {
-			a.logger().Warn("log records", zap.Error(err))
-		}
+	if a.isAvailable() {
+		go func() {
+			record := ReportLog{
+				Protocol:        req.URL.Scheme,
+				Path:            req.URL.Path,
+				Hostname:        req.URL.Hostname(),
+				Method:          req.Method,
+				StartedAt:       int(start.UnixNano() / 1000000),
+				EndedAt:         int(end.UnixNano() / 1000000),
+				Type:            "REQUEST_END",
+				StatusCode:      resp.StatusCode,
+				URL:             req.URL.String(),
+				RequestHeaders:  goHeadersToBearerHeaders(req.Header),
+				ResponseHeaders: goHeadersToBearerHeaders(resp.Header),
+			}
+			if resp.Body != nil {
+				buf, _ := ioutil.ReadAll(resp.Body)
+				respReader := ioutil.NopCloser(bytes.NewBuffer(buf))
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+				respBody, _ := ioutil.ReadAll(respReader)
+				record.ResponseBody = string(respBody)
+			}
+			if reqReader != nil {
+				reqBody, _ := ioutil.ReadAll(reqReader)
+				record.RequestBody = string(reqBody)
+			}
+			if err := a.logRecords([]ReportLog{record}); err != nil {
+				a.logger().Warn("log records", zap.Error(err))
+			}
+		}()
 	}
 
 	// here we can handle retry/circuit-breaking policies, i.e.:
@@ -100,6 +102,10 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 			}
 	*/
 	return resp, err
+}
+
+func (a *Agent) isAvailable() bool {
+	return a.SecretKey != ""
 }
 
 func (a Agent) Config() (*Config, error) {

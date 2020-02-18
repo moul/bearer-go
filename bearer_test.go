@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -75,8 +76,24 @@ func TestAgent_logRecords(t *testing.T) {
 	}
 	t.Run("unauthenticated", func(t *testing.T) {
 		agent := Agent{}
-		err := agent.logRecords(records)
-		require.Error(t, err)
+		for i := 0; i < 10; i++ {
+			err := agent.logRecords(records)
+			require.Error(t, err)
+		}
+	})
+
+	t.Run("unauthenticated/concurrent", func(t *testing.T) {
+		agent := Agent{}
+		var wg sync.WaitGroup
+		for i := 0; i < 20; i++ {
+			wg.Add(1)
+			go func() {
+				err := agent.logRecords(records)
+				require.Error(t, err)
+				wg.Done()
+			}()
+			wg.Wait()
+		}
 	})
 
 	sk := os.Getenv("BEARER_SECRETKEY")
@@ -85,8 +102,10 @@ func TestAgent_logRecords(t *testing.T) {
 	}
 	t.Run("authenticated", func(t *testing.T) {
 		agent := Agent{SecretKey: sk}
-		err := agent.logRecords(records)
-		require.NoError(t, err)
+		for i := 0; i < 3; i++ {
+			err := agent.logRecords(records)
+			require.NoError(t, err)
+		}
 	})
 }
 
@@ -94,7 +113,6 @@ func TestRoundTrip(t *testing.T) {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Hello", "World")
 		w.Write([]byte("200 OK"))
-		w.Write([]byte("Hello World!"))
 	}
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
