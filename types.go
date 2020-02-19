@@ -1,5 +1,7 @@
 package bearer
 
+import "strings"
+
 // Config is retrieved from Bearer's API.
 type Config struct {
 	BlockedDomains []string `json:"blockedDomains"`
@@ -22,4 +24,28 @@ type ReportLog struct {
 	ResponseHeaders map[string]string `json:"responseHeaders"`
 	ResponseBody    string            `json:"responseBody"`
 	// FIXME: Instrumentation
+}
+
+// RequestContentType returns the value of the requesting "Content-Type" HTTP header.
+func (r ReportLog) RequestContentType() string {
+	if r.RequestHeaders != nil {
+		for k, v := range r.RequestHeaders {
+			if strings.ToLower(k) == "content-type" {
+				return v
+			}
+		}
+	}
+	return ""
+}
+
+// ResponseContentType returns the value of the replying "Content-Type" HTTP header.
+func (r ReportLog) ResponseContentType() string {
+	if r.ResponseHeaders != nil {
+		for k, v := range r.ResponseHeaders {
+			if strings.ToLower(k) == "content-type" {
+				return v
+			}
+		}
+	}
+	return ""
 }
