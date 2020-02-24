@@ -1,0 +1,4 @@
+# this file configures the GitHub reviewer auto-assigner.
+
+# by default, all the PRs auto-assign @moul as reviewer:
+* @moul
