@@ -1,9 +1,7 @@
 package bearer
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,40 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
-
-func Example() {
-	ReplaceGlobals(Init(os.Getenv("BEARER_SECRETKEY")))
-
-	// perform request
-	resp, err := http.Get("...")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("resp", resp)
-}
-
-func Example_advanced() {
-	logger, _ := zap.NewDevelopment()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	agent := &Agent{
-		SecretKey: os.Getenv("BEARER_SECRETKEY"),
-		Logger:    logger,
-		Transport: http.DefaultTransport,
-		Context:   ctx,
-	}
-	defer agent.Flush()
-	client := &http.Client{Transport: agent}
-
-	// perform request
-	resp, err := client.Get("...")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("resp", resp)
-}
 
 func TestAgent_Config(t *testing.T) {
 	sk := os.Getenv("BEARER_SECRETKEY")

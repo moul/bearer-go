@@ -108,7 +108,7 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 				reqBody, _ := ioutil.ReadAll(reqReader)
 				record.RequestBody = string(reqBody)
 			}
-			if err := record.Sanitize(); err != nil {
+			if err := record.sanitize(); err != nil {
 				a.logger().Warn("sanitize record", zap.Error(err))
 			}
 			if err := a.logRecords([]ReportLog{record}); err != nil {

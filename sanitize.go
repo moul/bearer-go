@@ -15,10 +15,11 @@ const (
 var (
 	sensitiveKeys   = regexp.MustCompile(defaultStripSensitiveKeys)
 	sensitiveValues = regexp.MustCompile(defaultStripSensitiveRegex)
+	// FIXME: remove globals
 )
 
-// Sanitize prevents most of the credentials from being sent to Bearer
-func (r *ReportLog) Sanitize() error {
+// sanitize prevents most of the credentials from being sent to Bearer
+func (r *ReportLog) sanitize() error {
 	// sanitize headers
 	if r.RequestHeaders != nil {
 		for k, v := range r.RequestHeaders {
@@ -93,11 +94,12 @@ func sanitizeJSON(input string) (string, error) {
 	for k, v := range obj {
 		if sensitiveKeys.MatchString(k) {
 			obj[k] = defaultSensitivePlaceholder
-		}
-		switch t := v.(type) {
-		case string:
-			t = sensitiveValues.ReplaceAllString(t, defaultSensitivePlaceholder)
-			// FIXME: support nested maps
+		} else {
+			switch t := v.(type) {
+			case string:
+				obj[k] = sensitiveValues.ReplaceAllString(t, defaultSensitivePlaceholder)
+				// FIXME: support nested maps
+			}
 		}
 	}
 

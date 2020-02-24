@@ -62,7 +62,7 @@ func TestSanitize(t *testing.T) {
 	i := 0
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			err := test.input.Sanitize()
+			err := test.input.sanitize()
 			require.NoError(t, err)
 			checkSameReportLogs(t, test.expectedOutput, test.input)
 		})
