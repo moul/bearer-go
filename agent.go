@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -63,6 +64,10 @@ func ReplaceGlobals(n http.RoundTripper) func() {
 	return func() { ReplaceGlobals(prev) }
 }
 
+var (
+	isParseableContentType = regexp.MustCompile(`(?i)json|text|xml|x-www-form-urlencoded`)
+)
+
 // RoundTrip implements the http.RoundTripper interface
 func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 	for _, domain := range a.config().BlockedDomains {
@@ -84,33 +89,7 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	if a.isAvailable() {
 		go func() {
-			record := ReportLog{
-				Protocol:        req.URL.Scheme,
-				Path:            req.URL.Path,
-				Hostname:        req.URL.Hostname(),
-				Method:          req.Method,
-				StartedAt:       int(start.UnixNano() / 1000000),
-				EndedAt:         int(end.UnixNano() / 1000000),
-				Type:            "REQUEST_END",
-				StatusCode:      resp.StatusCode,
-				URL:             req.URL.String(),
-				RequestHeaders:  goHeadersToBearerHeaders(req.Header),
-				ResponseHeaders: goHeadersToBearerHeaders(resp.Header),
-			}
-			if resp.Body != nil {
-				buf, _ := ioutil.ReadAll(resp.Body)
-				respReader := ioutil.NopCloser(bytes.NewBuffer(buf))
-				resp.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
-				respBody, _ := ioutil.ReadAll(respReader)
-				record.ResponseBody = string(respBody)
-			}
-			if reqReader != nil {
-				reqBody, _ := ioutil.ReadAll(reqReader)
-				record.RequestBody = string(reqBody)
-			}
-			if err := record.sanitize(); err != nil {
-				a.logger().Warn("sanitize record", zap.Error(err))
-			}
+			record := newRecord(req, resp, start, end, reqReader, a.logger())
 			if err := a.logRecords([]ReportLog{record}); err != nil {
 				a.logger().Warn("log record", zap.Error(err))
 			}
@@ -125,6 +104,37 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 			}
 	*/
 	return resp, err
+}
+
+func newRecord(req *http.Request, resp *http.Response, start, end time.Time, reqReader io.ReadCloser, logger *zap.Logger) ReportLog {
+	record := ReportLog{
+		Protocol:        req.URL.Scheme,
+		Path:            req.URL.Path,
+		Hostname:        req.URL.Hostname(),
+		Method:          req.Method,
+		StartedAt:       int(start.UnixNano() / 1000000),
+		EndedAt:         int(end.UnixNano() / 1000000),
+		Type:            "REQUEST_END",
+		StatusCode:      resp.StatusCode,
+		URL:             req.URL.String(),
+		RequestHeaders:  goHeadersToBearerHeaders(req.Header),
+		ResponseHeaders: goHeadersToBearerHeaders(resp.Header),
+	}
+	if resp.Body != nil && isParseableContentType.MatchString(record.RequestContentType()) {
+		buf, _ := ioutil.ReadAll(resp.Body)
+		respReader := ioutil.NopCloser(bytes.NewBuffer(buf))
+		resp.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+		respBody, _ := ioutil.ReadAll(respReader)
+		record.ResponseBody = string(respBody)
+	}
+	if reqReader != nil && isParseableContentType.MatchString(record.ResponseContentType()) {
+		reqBody, _ := ioutil.ReadAll(reqReader)
+		record.RequestBody = string(reqBody)
+	}
+	if err := record.sanitize(); err != nil {
+		logger.Warn("sanitize record", zap.Error(err))
+	}
+	return record
 }
 
 func (a *Agent) isAvailable() bool {
