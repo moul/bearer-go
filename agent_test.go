@@ -155,3 +155,27 @@ func TestRoundTrip(t *testing.T) {
 		assert.Equal(t, resp.StatusCode, 200)
 	})
 }
+
+func TestIsParseableContentType(t *testing.T) {
+	//isParseableContentType = regexp.MustCompile(`(?i)json|text|xml|x-www-form-urlencoded`)
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"json", true},
+		{"application/json", true},
+		{"apPlication/JSON", true},
+		{"jsan", false},
+		{"text/plain", true},
+		{"", false},
+		{"blah/xml/blih", true},
+		{"x-www-form-urlencoded", true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			got := isParseableContentType.MatchString(test.input)
+			assert.Equal(t, test.expected, got)
+		})
+	}
+}
