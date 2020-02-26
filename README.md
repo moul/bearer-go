@@ -2,7 +2,7 @@
 
 :smile: Bearer API Client for Golang
 
-[![GoDoc](https://godoc.org/github.com/Bearer/bearer-go?status.svg)](https://godoc.org/github.com/Bearer/bearer-go)
+[![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=blue)](https://pkg.go.dev/github.com/Bearer/bearer-go?tab=doc)
 [![License](https://img.shields.io/badge/license-Apache--2.0-%2397ca00.svg)](https://github.com/Bearer/bearer-go/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Bearer/bearer-go)](https://goreportcard.com/report/github.com/Bearer/bearer-go)
 [![GolangCI](https://golangci.com/badges/github.com/Bearer/bearer-go.svg)](https://golangci.com/r/github.com/Bearer/bearer-go)

@@ -54,6 +54,7 @@ func TestSanitize(t *testing.T) {
 		{ReportLog{URL: "http://api.example.com/blah/blih?bluh=Authorization&authorization=blanh"}, ReportLog{URL: ""}, nil},
 		{ReportLog{URL: "http://api.example.com/email/contact@example.org"}, ReportLog{URL: "http://api.example.com/email/[FILTERED].org"}, nil},
 		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"authorization":"blah"}`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"authorization":"[FILTERED]"}`}, nil},
+		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json; charset=utf-8"}, RequestBody: `{"authorization":"blah"}`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json; charset=utf-8"}, RequestBody: `{"authorization":"[FILTERED]"}`}, nil},
 		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `[42]`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `[42]`}, nil},
 		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `42`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `42`}, nil},
 		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{}`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{}`}, nil},

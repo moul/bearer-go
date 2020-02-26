@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -65,14 +66,14 @@ func (r *ReportLog) sanitize() error {
 	}
 
 	// sanitize bodies
-	if r.RequestBody != "" && r.RequestContentType() == "application/json" {
+	if r.RequestBody != "" && strings.HasPrefix(r.RequestContentType(), "application/json") {
 		body, err := sanitizeJSON(r.RequestBody)
 		if err != nil {
 			return err
 		}
 		r.RequestBody = body
 	}
-	if r.ResponseBody != "" && r.ResponseContentType() == "application/json" {
+	if r.ResponseBody != "" && strings.HasPrefix(r.ResponseContentType(), "application/json") {
 		body, err := sanitizeJSON(r.ResponseBody)
 		if err != nil {
 			return err
