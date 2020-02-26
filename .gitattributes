@@ -1,0 +1,9 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Collapse vendored and generated files on GitHub
+go.sum linguist-generated
+go.mod linguist-generated
+
+# Reduce conflicts on markdown files
+*.md merge=union

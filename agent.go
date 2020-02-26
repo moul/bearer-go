@@ -78,18 +78,28 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	var reqReader io.ReadCloser
 	if req.Body != nil && a.isAvailable() {
-		buf, _ := ioutil.ReadAll(req.Body)
+		buf, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			a.logger().Error("read request body", zap.Error(err))
+			return nil, err
+		}
 		reqReader = ioutil.NopCloser(bytes.NewBuffer(buf))
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
 	}
 
 	start := time.Now()
-	resp, err := a.transport().RoundTrip(req)
+	resp, roundtripError := a.transport().RoundTrip(req)
 	end := time.Now()
 
 	if a.isAvailable() {
+		record := newRecord(req, resp, start, end, reqReader, a.logger(), roundtripError)
 		go func() {
-			record := newRecord(req, resp, start, end, reqReader, a.logger())
+			defer func() {
+				if r := recover(); r != nil {
+					a.logger().Error("panic", zap.Any("r", r))
+					// FIXME: log an internal error
+				}
+			}()
 			if err := a.logRecords([]ReportLog{record}); err != nil {
 				a.logger().Warn("log record", zap.Error(err))
 			}
@@ -103,10 +113,10 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 				return a.RoundTrip(req)
 			}
 	*/
-	return resp, err
+	return resp, roundtripError
 }
 
-func newRecord(req *http.Request, resp *http.Response, start, end time.Time, reqReader io.ReadCloser, logger *zap.Logger) ReportLog {
+func newRecord(req *http.Request, resp *http.Response, start, end time.Time, reqReader io.ReadCloser, logger *zap.Logger, roundtripError error) ReportLog {
 	record := ReportLog{
 		Protocol:        req.URL.Scheme,
 		Path:            req.URL.Path,
@@ -120,7 +130,7 @@ func newRecord(req *http.Request, resp *http.Response, start, end time.Time, req
 		RequestHeaders:  goHeadersToBearerHeaders(req.Header),
 		ResponseHeaders: goHeadersToBearerHeaders(resp.Header),
 	}
-	if resp.Body != nil && isParseableContentType.MatchString(record.RequestContentType()) {
+	if roundtripError == nil && resp.Body != nil && isParseableContentType.MatchString(record.RequestContentType()) {
 		buf, _ := ioutil.ReadAll(resp.Body)
 		respReader := ioutil.NopCloser(bytes.NewBuffer(buf))
 		resp.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
