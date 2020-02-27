@@ -20,7 +20,7 @@ var (
 )
 
 // sanitize prevents most of the credentials from being sent to Bearer
-func (r *ReportLog) sanitize() error {
+func (r *reportLog) sanitize() error {
 	// sanitize headers
 	if r.RequestHeaders != nil {
 		for k, v := range r.RequestHeaders {
