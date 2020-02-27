@@ -3,6 +3,9 @@ package bearer
 import "net/http"
 
 func goHeadersToBearerHeaders(input http.Header) map[string]string {
+	if input == nil {
+		return nil
+	}
 	ret := map[string]string{}
 	for key, values := range input {
 		// bearer headers only support one value per key
