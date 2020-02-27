@@ -58,7 +58,7 @@ func TestAgent_config(t *testing.T) {
 }
 
 func TestAgent_logRecords(t *testing.T) {
-	records := []ReportLog{
+	records := []reportLog{
 		{
 			Protocol:        "https",
 			Path:            "/sample",

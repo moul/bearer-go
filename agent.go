@@ -100,7 +100,7 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 					// FIXME: log an internal error
 				}
 			}()
-			if err := a.logRecords([]ReportLog{record}); err != nil {
+			if err := a.logRecords([]reportLog{record}); err != nil {
 				a.logger().Warn("log record", zap.Error(err))
 			}
 		}()
@@ -116,8 +116,8 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, roundtripError
 }
 
-func newRecord(req *http.Request, resp *http.Response, start, end time.Time, reqReader io.ReadCloser, logger *zap.Logger, roundtripError error) ReportLog {
-	record := ReportLog{
+func newRecord(req *http.Request, resp *http.Response, start, end time.Time, reqReader io.ReadCloser, logger *zap.Logger, roundtripError error) reportLog {
+	record := reportLog{
 		Protocol:        req.URL.Scheme,
 		Path:            req.URL.Path,
 		Hostname:        req.URL.Hostname(),
@@ -242,7 +242,7 @@ func (a *Agent) config() *Config {
 	return a.configCache
 }
 
-func (a Agent) logRecords(records []ReportLog) error {
+func (a Agent) logRecords(records []reportLog) error {
 	if len(records) < 1 {
 		return nil
 	}
@@ -259,7 +259,7 @@ func (a Agent) logRecords(records []ReportLog) error {
 			LogLevel string `json:"log_level"`
 			// FIXME: Config
 		} `json:"agent"`
-		Logs []ReportLog `json:"logs"`
+		Logs []reportLog `json:"logs"`
 	}
 	input := logsRequest{SecretKey: a.SecretKey, Logs: records}
 	input.Runtime.Type = "go"

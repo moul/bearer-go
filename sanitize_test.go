@@ -11,7 +11,7 @@ import (
 )
 
 func TestSanitize(t *testing.T) {
-	saneReport := ReportLog{
+	saneReport := reportLog{
 		Protocol:        "https",
 		Path:            "/sample",
 		Hostname:        "api.example.com",
@@ -29,49 +29,49 @@ func TestSanitize(t *testing.T) {
 	}
 
 	var tests = []struct {
-		input          ReportLog
-		expectedOutput ReportLog
+		input          reportLog
+		expectedOutput reportLog
 		expectedErr    error
 	}{
 		{saneReport, saneReport, nil},
-		{ReportLog{RequestHeaders: map[string]string{"authorization": "hello"}}, ReportLog{RequestHeaders: map[string]string{"authorization": "[FILTERED]"}}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Authorization": "hello"}}, ReportLog{RequestHeaders: map[string]string{"Authorization": "[FILTERED]"}}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"AutHorizAtion": "hello"}}, ReportLog{RequestHeaders: map[string]string{"AutHorizAtion": "[FILTERED]"}}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Authorization2": "hello"}}, ReportLog{RequestHeaders: map[string]string{"Authorization2": "hello"}}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"2Authorization": "hello"}}, ReportLog{RequestHeaders: map[string]string{"2Authorization": "hello"}}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Blah": "hello"}}, ReportLog{RequestHeaders: map[string]string{"Blah": "hello"}}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Blah": "contact@example.com"}}, ReportLog{RequestHeaders: map[string]string{"Blah": "[FILTERED].com"}}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Blah": "aaa bbb@ccc ddd eee@fff.ggg hhh"}}, ReportLog{RequestHeaders: map[string]string{"Blah": "aaa [FILTERED] ddd [FILTERED].ggg hhh"}}, nil},
-		{ReportLog{ResponseHeaders: map[string]string{"authorization": "hello"}}, ReportLog{ResponseHeaders: map[string]string{"authorization": "[FILTERED]"}}, nil},
-		{ReportLog{ResponseHeaders: map[string]string{"Authorization": "hello"}}, ReportLog{ResponseHeaders: map[string]string{"Authorization": "[FILTERED]"}}, nil},
-		{ReportLog{ResponseHeaders: map[string]string{"AutHorizAtion": "hello"}}, ReportLog{ResponseHeaders: map[string]string{"AutHorizAtion": "[FILTERED]"}}, nil},
-		{ReportLog{ResponseHeaders: map[string]string{"Authorization2": "hello"}}, ReportLog{ResponseHeaders: map[string]string{"Authorization2": "hello"}}, nil},
-		{ReportLog{ResponseHeaders: map[string]string{"2Authorization": "hello"}}, ReportLog{ResponseHeaders: map[string]string{"2Authorization": "hello"}}, nil},
-		{ReportLog{ResponseHeaders: map[string]string{"Blah": "hello"}}, ReportLog{ResponseHeaders: map[string]string{"Blah": "hello"}}, nil},
-		{ReportLog{ResponseHeaders: map[string]string{"Blah": "contact@example.com"}}, ReportLog{ResponseHeaders: map[string]string{"Blah": "[FILTERED].com"}}, nil},
-		{ReportLog{ResponseHeaders: map[string]string{"Blah": "aaa bbb@ccc ddd eee@fff.ggg hhh"}}, ReportLog{ResponseHeaders: map[string]string{"Blah": "aaa [FILTERED] ddd [FILTERED].ggg hhh"}}, nil},
-		{ReportLog{URL: "http://api.example.com/blah/blih?bluh=bloh&blouh=blanh"}, ReportLog{URL: "http://api.example.com/blah/blih?bluh=bloh&blouh=blanh"}, nil},
-		{ReportLog{URL: "http://api.example.com/blah/blih?bluh=Authorization&authorization=blanh"}, ReportLog{URL: ""}, nil},
-		{ReportLog{URL: "http://api.example.com/email/contact@example.org"}, ReportLog{URL: "http://api.example.com/email/[FILTERED].org"}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"authorization":"blah"}`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"authorization":"[FILTERED]"}`}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json; charset=utf-8"}, RequestBody: `{"authorization":"blah"}`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json; charset=utf-8"}, RequestBody: `{"authorization":"[FILTERED]"}`}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `[42]`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `[42]`}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `42`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `42`}, nil},
-		{ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{}`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{}`}, nil},
-		// FIXME: {ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"a":{"authorization":"blah"}}`}, ReportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"a":{"authorization}:"[FILTERED]"}`}, nil},
+		{reportLog{RequestHeaders: map[string]string{"authorization": "hello"}}, reportLog{RequestHeaders: map[string]string{"authorization": "[FILTERED]"}}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Authorization": "hello"}}, reportLog{RequestHeaders: map[string]string{"Authorization": "[FILTERED]"}}, nil},
+		{reportLog{RequestHeaders: map[string]string{"AutHorizAtion": "hello"}}, reportLog{RequestHeaders: map[string]string{"AutHorizAtion": "[FILTERED]"}}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Authorization2": "hello"}}, reportLog{RequestHeaders: map[string]string{"Authorization2": "hello"}}, nil},
+		{reportLog{RequestHeaders: map[string]string{"2Authorization": "hello"}}, reportLog{RequestHeaders: map[string]string{"2Authorization": "hello"}}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Blah": "hello"}}, reportLog{RequestHeaders: map[string]string{"Blah": "hello"}}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Blah": "contact@example.com"}}, reportLog{RequestHeaders: map[string]string{"Blah": "[FILTERED].com"}}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Blah": "aaa bbb@ccc ddd eee@fff.ggg hhh"}}, reportLog{RequestHeaders: map[string]string{"Blah": "aaa [FILTERED] ddd [FILTERED].ggg hhh"}}, nil},
+		{reportLog{ResponseHeaders: map[string]string{"authorization": "hello"}}, reportLog{ResponseHeaders: map[string]string{"authorization": "[FILTERED]"}}, nil},
+		{reportLog{ResponseHeaders: map[string]string{"Authorization": "hello"}}, reportLog{ResponseHeaders: map[string]string{"Authorization": "[FILTERED]"}}, nil},
+		{reportLog{ResponseHeaders: map[string]string{"AutHorizAtion": "hello"}}, reportLog{ResponseHeaders: map[string]string{"AutHorizAtion": "[FILTERED]"}}, nil},
+		{reportLog{ResponseHeaders: map[string]string{"Authorization2": "hello"}}, reportLog{ResponseHeaders: map[string]string{"Authorization2": "hello"}}, nil},
+		{reportLog{ResponseHeaders: map[string]string{"2Authorization": "hello"}}, reportLog{ResponseHeaders: map[string]string{"2Authorization": "hello"}}, nil},
+		{reportLog{ResponseHeaders: map[string]string{"Blah": "hello"}}, reportLog{ResponseHeaders: map[string]string{"Blah": "hello"}}, nil},
+		{reportLog{ResponseHeaders: map[string]string{"Blah": "contact@example.com"}}, reportLog{ResponseHeaders: map[string]string{"Blah": "[FILTERED].com"}}, nil},
+		{reportLog{ResponseHeaders: map[string]string{"Blah": "aaa bbb@ccc ddd eee@fff.ggg hhh"}}, reportLog{ResponseHeaders: map[string]string{"Blah": "aaa [FILTERED] ddd [FILTERED].ggg hhh"}}, nil},
+		{reportLog{URL: "http://api.example.com/blah/blih?bluh=bloh&blouh=blanh"}, reportLog{URL: "http://api.example.com/blah/blih?bluh=bloh&blouh=blanh"}, nil},
+		{reportLog{URL: "http://api.example.com/blah/blih?bluh=Authorization&authorization=blanh"}, reportLog{URL: ""}, nil},
+		{reportLog{URL: "http://api.example.com/email/contact@example.org"}, reportLog{URL: "http://api.example.com/email/[FILTERED].org"}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"authorization":"blah"}`}, reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"authorization":"[FILTERED]"}`}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json; charset=utf-8"}, RequestBody: `{"authorization":"blah"}`}, reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json; charset=utf-8"}, RequestBody: `{"authorization":"[FILTERED]"}`}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `[42]`}, reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `[42]`}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `42`}, reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `42`}, nil},
+		{reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{}`}, reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{}`}, nil},
+		// FIXME: {reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"a":{"authorization":"blah"}}`}, reportLog{RequestHeaders: map[string]string{"Content-Type": "application/json"}, RequestBody: `{"a":{"authorization}:"[FILTERED]"}`}, nil},
 	}
 	i := 0
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			err := test.input.sanitize()
 			require.NoError(t, err)
-			checkSameReportLogs(t, test.expectedOutput, test.input)
+			checkSamereportLogs(t, test.expectedOutput, test.input)
 		})
 		i++
 	}
 }
 
-func checkSameReportLogs(t *testing.T, a, b ReportLog) {
+func checkSamereportLogs(t *testing.T, a, b reportLog) {
 	t.Helper()
 
 	assert.Equal(t, a.Protocol, b.Protocol)

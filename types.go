@@ -8,8 +8,8 @@ type Config struct {
 	// FIXME: add missing fieldss
 }
 
-// ReportLog is the log object sent to Bearer's API.
-type ReportLog struct {
+// reportLog is the log object sent to Bearer's API.
+type reportLog struct {
 	Protocol        string            `json:"protocol"`
 	Path            string            `json:"path"`
 	Hostname        string            `json:"hostname"`
@@ -27,7 +27,7 @@ type ReportLog struct {
 }
 
 // RequestContentType returns the value of the requesting "Content-Type" HTTP header.
-func (r ReportLog) RequestContentType() string {
+func (r reportLog) RequestContentType() string {
 	if r.RequestHeaders != nil {
 		for k, v := range r.RequestHeaders {
 			if strings.ToLower(k) == "content-type" {
@@ -39,7 +39,7 @@ func (r ReportLog) RequestContentType() string {
 }
 
 // ResponseContentType returns the value of the replying "Content-Type" HTTP header.
-func (r ReportLog) ResponseContentType() string {
+func (r reportLog) ResponseContentType() string {
 	if r.ResponseHeaders != nil {
 		for k, v := range r.ResponseHeaders {
 			if strings.ToLower(k) == "content-type" {
