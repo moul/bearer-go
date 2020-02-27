@@ -118,17 +118,19 @@ func (a *Agent) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func newRecord(req *http.Request, resp *http.Response, start, end time.Time, reqReader io.ReadCloser, logger *zap.Logger, roundtripError error) reportLog {
 	record := reportLog{
-		Protocol:        req.URL.Scheme,
-		Path:            req.URL.Path,
-		Hostname:        req.URL.Hostname(),
-		Method:          req.Method,
-		StartedAt:       int(start.UnixNano() / 1000000),
-		EndedAt:         int(end.UnixNano() / 1000000),
-		Type:            "REQUEST_END",
-		StatusCode:      resp.StatusCode,
-		URL:             req.URL.String(),
-		RequestHeaders:  goHeadersToBearerHeaders(req.Header),
-		ResponseHeaders: goHeadersToBearerHeaders(resp.Header),
+		Protocol:  req.URL.Scheme,
+		Path:      req.URL.Path,
+		Hostname:  req.URL.Hostname(),
+		Method:    req.Method,
+		StartedAt: int(start.UnixNano() / 1000000),
+		EndedAt:   int(end.UnixNano() / 1000000),
+		Type:      "REQUEST_END",
+		URL:       req.URL.String(),
+	}
+	if resp != nil {
+		record.StatusCode = resp.StatusCode
+		record.RequestHeaders = goHeadersToBearerHeaders(req.Header)
+		record.ResponseHeaders = goHeadersToBearerHeaders(resp.Header)
 	}
 	if roundtripError == nil && resp.Body != nil && isParseableContentType.MatchString(record.RequestContentType()) {
 		buf, _ := ioutil.ReadAll(resp.Body)
